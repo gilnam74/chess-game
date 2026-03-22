@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm init:*)",
+      "Bash(npm install:*)",
+      "Bash(where node:*)",
+      "Bash(cmd /c \"node --version 2>&1 && npm --version 2>&1\")"
+    ]
+  }
+}

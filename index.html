@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>War Chess — Multiplayer</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+    <div style="font-size:1.6rem">♟</div>
+    <div>
+        <h1>War Chess</h1>
+        <div class="subtitle">MULTIPLAYER TACTICAL CHESS</div>
+    </div>
+</header>
+
+<!-- ── Lobby ── -->
+<div id="lobby" style="display:flex; flex-direction:column; align-items:center; padding:40px 20px; width:100%; max-width:480px;">
+    <div style="font-size:5rem; margin-bottom:8px;">♛</div>
+    <h2 style="color:var(--accent); font-size:1.8rem; margin-bottom:8px;">War Chess</h2>
+    <p class="lobby-desc" style="color:var(--text-dim); text-align:center; margin-bottom:32px; line-height:1.7;">
+        역사의 전장에서 펼쳐지는 전략 체스.<br>
+        친구를 초대하거나 같은 기기에서 플레이하세요.
+    </p>
+
+    <button class="lobby-btn" onclick="createRoom()" style="margin-bottom:8px;">
+        ⚔️ &nbsp; 방 만들기 (Host)
+    </button>
+
+    <div class="divider" style="margin:12px 0; width:100%; display:flex; align-items:center; gap:12px; color:var(--text-dim); font-size:0.8rem;">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        또는
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
+
+    <div style="display:flex; width:100%; gap:8px; margin-bottom:16px;">
+        <input type="text" id="join-input" placeholder="방 코드 입력 (예: AB12CD)"
+               maxlength="6" style="text-transform:uppercase; letter-spacing:3px; font-family:monospace;">
+        <button class="lobby-btn" onclick="joinRoom()" style="width:auto; padding:12px 20px; white-space:nowrap;">
+            참가
+        </button>
+    </div>
+
+    <div class="divider" style="margin:12px 0; width:100%; display:flex; align-items:center; gap:12px; color:var(--text-dim); font-size:0.8rem;">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        로컬
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
+
+    <button class="lobby-btn secondary" onclick="playLocal()">
+        🖥️ &nbsp; 같은 기기에서 2인 플레이
+    </button>
+</div>
+
+<!-- ── Waiting for opponent ── -->
+<div id="waiting" style="display:none; flex-direction:column; align-items:center; gap:24px; padding:60px 20px; text-align:center;">
+    <div style="font-size:3rem;">⚔️</div>
+    <h2 style="color:var(--accent);">상대방을 기다리는 중...</h2>
+    <p style="color:var(--text-dim);">아래 코드를 친구에게 공유하세요</p>
+
+    <div class="room-code-box" style="background:var(--panel2); border:2px solid var(--accent); border-radius:12px; padding:24px 48px;">
+        <div style="font-size:0.72rem; color:var(--text-dim); letter-spacing:2px; text-transform:uppercase; margin-bottom:8px;">방 코드</div>
+        <div id="room-code" style="font-size:2.4rem; font-weight:700; color:var(--accent2); letter-spacing:8px; font-family:monospace;">------</div>
+        <button onclick="copyCode()" style="margin-top:12px; background:transparent; border:1px solid var(--border); color:var(--text-dim); padding:6px 16px; border-radius:6px; cursor:pointer; font-size:0.8rem; transition:all 0.2s;">
+            📋 코드 복사
+        </button>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:12px; color:var(--text-dim); font-size:0.9rem;">
+        <div class="spinner"></div>
+        연결 대기 중
+    </div>
+
+    <button class="lobby-btn secondary" style="max-width:200px;"
+            onclick="document.getElementById('waiting').style.display='none'; document.getElementById('lobby').style.display='flex';">
+        취소
+    </button>
+</div>
+
+<!-- ── Game ── -->
+<div id="game" style="display:none; flex-direction:row; gap:16px; padding:16px; width:100%; max-width:1100px; justify-content:center; align-items:flex-start;">
+
+    <!-- Board -->
+    <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+
+        <!-- Rank labels + Board -->
+        <div style="display:flex; gap:4px; align-items:center;">
+            <!-- Left rank labels -->
+            <div id="ranks-left" style="display:flex; flex-direction:column; height:560px; justify-content:space-around; padding:4px 0;">
+                <span class="label">8</span><span class="label">7</span><span class="label">6</span>
+                <span class="label">5</span><span class="label">4</span><span class="label">3</span>
+                <span class="label">2</span><span class="label">1</span>
+            </div>
+
+            <div id="board"></div>
+
+            <!-- Right rank labels -->
+            <div id="ranks-right" style="display:flex; flex-direction:column; height:560px; justify-content:space-around; padding:4px 0;">
+                <span class="label">8</span><span class="label">7</span><span class="label">6</span>
+                <span class="label">5</span><span class="label">4</span><span class="label">3</span>
+                <span class="label">2</span><span class="label">1</span>
+            </div>
+        </div>
+
+        <!-- File labels top -->
+        <div id="files-top" style="display:flex; width:560px; justify-content:space-around; padding:0 4px; order:-1;">
+            <span class="label">a</span><span class="label">b</span><span class="label">c</span>
+            <span class="label">d</span><span class="label">e</span><span class="label">f</span>
+            <span class="label">g</span><span class="label">h</span>
+        </div>
+
+        <!-- File labels bottom -->
+        <div id="files-bottom" style="display:flex; width:560px; justify-content:space-around; padding:0 4px;">
+            <span class="label">a</span><span class="label">b</span><span class="label">c</span>
+            <span class="label">d</span><span class="label">e</span><span class="label">f</span>
+            <span class="label">g</span><span class="label">h</span>
+        </div>
+    </div>
+
+    <!-- Side Panel -->
+    <div style="display:flex; flex-direction:column; gap:12px; width:230px; min-width:200px;">
+
+        <!-- Status -->
+        <div class="panel-box">
+            <h3>게임 상태</h3>
+            <div id="status-text" class="status-text">White's turn</div>
+            <div class="turn-indicator">
+                <div id="turn-dot" class="turn-dot white"></div>
+                <span id="turn-label">White</span>
+            </div>
+        </div>
+
+        <!-- Players -->
+        <div class="panel-box">
+            <h3>플레이어</h3>
+            <div id="black-row" class="player-row">
+                <div class="player-avatar black-av">♚</div>
+                <div class="player-info">
+                    <div id="black-name" class="player-name">Black</div>
+                    <div class="player-side">흑 (Black)</div>
+                </div>
+                <span id="black-you" class="player-you" style="display:none;">나</span>
+            </div>
+            <div id="white-row" class="player-row active">
+                <div class="player-avatar white-av">♔</div>
+                <div class="player-info">
+                    <div id="white-name" class="player-name">White</div>
+                    <div class="player-side">백 (White)</div>
+                </div>
+                <span id="white-you" class="player-you" style="display:none;">나</span>
+            </div>
+        </div>
+
+        <!-- Move history -->
+        <div class="panel-box">
+            <h3>기보</h3>
+            <div id="move-list" class="move-list"></div>
+        </div>
+
+        <!-- Actions -->
+        <div class="panel-box">
+            <h3>액션</h3>
+            <button class="action-btn danger" onclick="resignGame()">🏳 기권</button>
+            <button class="action-btn" onclick="goToLobby()">← 로비로</button>
+        </div>
+
+    </div>
+</div>
+
+<!-- ── Promotion Modal ── -->
+<div id="promotion-modal">
+    <div class="promotion-box">
+        <h3>♟ 폰 승급 — 기물을 선택하세요</h3>
+        <div id="promo-pieces" class="promo-pieces"></div>
+    </div>
+</div>
+
+<!-- ── Game Over Overlay ── -->
+<div id="gameover-overlay">
+    <div class="gameover-box">
+        <div id="gameover-trophy" class="gameover-trophy">♔</div>
+        <div id="gameover-title" class="gameover-title">White Wins!</div>
+        <div id="gameover-subtitle" class="gameover-subtitle">Checkmate</div>
+        <button class="lobby-btn" onclick="requestRematch()" style="margin-bottom:12px;">
+            🔄 리매치
+        </button>
+        <button class="lobby-btn secondary" onclick="goToLobby()">
+            ← 로비로
+        </button>
+    </div>
+</div>
+
+<!-- ── Toast ── -->
+<div id="toast"></div>
+
+<script src="chess.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
