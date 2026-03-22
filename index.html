@@ -47,7 +47,25 @@
 
     <div class="divider" style="margin:12px 0; width:100%; display:flex; align-items:center; gap:12px; color:var(--text-dim); font-size:0.8rem;">
         <div style="flex:1;height:1px;background:var(--border)"></div>
-        로컬
+        컴퓨터와 대전
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
+
+    <div style="display:flex; width:100%; gap:8px; margin-bottom:8px;">
+        <button class="lobby-btn secondary" onclick="playVsAI(2)" style="font-size:0.85rem; padding:12px 8px;">
+            🤖 쉬움
+        </button>
+        <button class="lobby-btn secondary" onclick="playVsAI(3)" style="font-size:0.85rem; padding:12px 8px;">
+            🤖 보통
+        </button>
+        <button class="lobby-btn secondary" onclick="playVsAI(4)" style="font-size:0.85rem; padding:12px 8px;">
+            🤖 어려움
+        </button>
+    </div>
+
+    <div class="divider" style="margin:12px 0; width:100%; display:flex; align-items:center; gap:12px; color:var(--text-dim); font-size:0.8rem;">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        로컬 2인
         <div style="flex:1;height:1px;background:var(--border)"></div>
     </div>
 
@@ -198,6 +216,7 @@
 <div id="toast"></div>
 
 <script src="chess.js"></script>
+<script src="ai.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

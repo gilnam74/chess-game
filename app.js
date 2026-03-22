@@ -31,6 +31,8 @@ let pendingPromotion = null;
 let playerNames = { w: 'White', b: 'Black' };
 let gameActive = false;
 let localMode = false; // hot-seat for testing
+let aiMode = false;   // vs computer
+let aiDepth = 3;      // AI difficulty (depth)
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
 const lobbyEl      = document.getElementById('lobby');
@@ -153,8 +155,12 @@ function onSquareClick(e) {
     const state = engine.getState();
 
     // It's not my turn
-    if (!localMode && state.turn !== myColor) {
+    if (!localMode && !aiMode && state.turn !== myColor) {
         toast('상대방 차례입니다');
+        return;
+    }
+    if (aiMode && state.turn !== 'w') {
+        toast('AI가 생각 중입니다...');
         return;
     }
 
@@ -224,6 +230,33 @@ function executeMove(fr, fc, tr, tc, promotion='Q') {
     }
 
     checkGameOver();
+
+    // AI response
+    if (aiMode && engine.status === 'playing' || aiMode && engine.status === 'check') {
+        if (engine.turn === 'b') {
+            setTimeout(doAiMove, 400);
+        }
+    }
+}
+
+// ── AI move ────────────────────────────────────────────────────────────────
+function doAiMove() {
+    if (!gameActive || engine.turn !== 'b') return;
+    statusText.textContent = 'AI 생각 중...';
+
+    setTimeout(() => {
+        const move = AI.getBestMove(engine, aiDepth);
+        if (!move) return;
+        const hist = engine.move(move.fr, move.fc, move.tr, move.tc, 'Q');
+        selected = null;
+        validMoves = [];
+        moveHistory.push(hist);
+        renderBoard();
+        updateStatus();
+        updateMoveList();
+        updatePlayerRows();
+        checkGameOver();
+    }, 50);
 }
 
 // ── Promotion ──────────────────────────────────────────────────────────────
@@ -426,9 +459,20 @@ window.joinRoom = function() {
 
 window.playLocal = function() {
     localMode = true;
+    aiMode = false;
     myColor = 'w';
     playerNames.w = 'Player 1 (White)';
     playerNames.b = 'Player 2 (Black)';
+    startGame();
+};
+
+window.playVsAI = function(depth) {
+    localMode = false;
+    aiMode = true;
+    aiDepth = depth || 3;
+    myColor = 'w';
+    playerNames.w = '나 (White)';
+    playerNames.b = depth === 2 ? 'AI (쉬움)' : depth === 4 ? 'AI (어려움)' : 'AI (보통)';
     startGame();
 };
 
@@ -509,7 +553,7 @@ window.resignGame = function() {
 
 window.requestRematch = function() {
     gameoverEl.classList.remove('show');
-    if (localMode) { startNewGame(); return; }
+    if (localMode || aiMode) { startNewGame(); return; }
     sendData({ type: 'rematch' });
     toast('리매치 요청을 보냈습니다...');
 };
@@ -522,6 +566,7 @@ window.goToLobby = function() {
     if (peer) { peer.destroy(); peer = null; }
     isOnline = false;
     localMode = false;
+    aiMode = false;
     myColor = null;
     boardEl.style.transform = '';
 };
